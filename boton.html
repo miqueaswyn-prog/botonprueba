@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>Hablar</title>
+<style>
+*{box-sizing:border-box}html,body{margin:0;height:100%}body{font-family:Arial,sans-serif;color:#1b2230;background:#f6f7f9;display:flex;flex-direction:column;padding:16px;gap:12px;font-size:17px}
+#b{flex:1;min-height:220px;width:100%;border:0;border-radius:20px;background:#1F3864;color:#fff;font-size:26px;font-weight:700;touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
+#b.on{background:#B3261E}#t{min-height:90px;background:#fff;border:1px solid #C9CED6;border-radius:10px;padding:12px;white-space:pre-wrap}#e{color:#5B6575;font-size:15px;min-height:20px}
+#c{display:none;width:100%;padding:14px;border:1px solid #1F3864;background:#fff;color:#1F3864;border-radius:10px;font-size:17px;font-weight:600}
+</style></head><body>
+<div id="t"></div><div id="e">Mantené apretado, hablá y soltá.</div>
+<button id="c">Copiar el texto</button>
+<button id="b">Mantené apretado<br>y hablá</button>
+<script>
+var $=function(i){return document.getElementById(i)},S=window.SpeechRecognition||window.webkitSpeechRecognition;
+var b=$("b"),rec=null,activo=false,apretado=false,pendiente=false,base="",parcial="",app=null,origenApp="";
+function aviso(x){$("e").textContent=x}
+function pintar(){$("t").textContent=(base+" "+parcial).trim()}
+// El texto solo se le manda a la app de Google que abrió esta ventana.
+try{var o=new URLSearchParams(location.search).get("app");if(o&&/\.googleusercontent\.com$/.test(new URL(o).hostname)&&window.opener){app=window.opener;origenApp=new URL(o).origin}}catch(z){}
+function arrancar(){
+  if(!S){aviso("Este navegador no reconoce voz.");return}
+  if(activo){pendiente=true;return}
+  activo=true;rec=new S();rec.lang="es-AR";rec.continuous=true;rec.interimResults=true;
+  rec.onresult=function(v){var p="";for(var i=v.resultIndex;i<v.results.length;i++){if(v.results[i].isFinal)base=(base+" "+v.results[i][0].transcript).trim();else p+=v.results[i][0].transcript}parcial=p;pintar()};
+  rec.onerror=function(v){if(v.error==="not-allowed")aviso("El iPhone no dio permiso. Revisá Ajustes > Safari > Micrófono.");else if(v.error!=="aborted"&&v.error!=="no-speech")aviso("Error: "+v.error)};
+  rec.onend=function(){activo=false;if(parcial){base=(base+" "+parcial).trim();parcial=""}pintar();
+    if(apretado||pendiente){pendiente=false;arrancar();return}
+    entregar()};
+  try{rec.start()}catch(z){activo=false;aviso("Probá de nuevo.")}
+}
+function entregar(){
+  var txt=base.trim();
+  if(!txt){aviso("No te escuché. Probá de nuevo.");return}
+  $("c").style.display="block";
+  if(app){try{app.postMessage({repartoTexto:txt},origenApp);aviso("Listo, volvé a la app. Si no aparece el texto, copialo y pegalo en Por voz.");window.close();return}catch(z){}}
+  aviso("No encontré la app abierta (ventana: "+!!window.opener+"). Copiá el texto y pegalo en Por voz.");
+}
+function apretar(v){v.preventDefault();apretado=true;b.classList.add("on");b.innerHTML="Te escucho...<br>soltá para terminar";aviso("");arrancar()}
+function soltar(){if(!apretado)return;apretado=false;b.classList.remove("on");b.innerHTML="Mantené apretado<br>y hablá";aviso("Un momento...");if(rec&&activo)rec.stop();else entregar()}
+b.addEventListener("touchstart",apretar,{passive:false});b.addEventListener("touchend",soltar);b.addEventListener("touchcancel",soltar);
+b.addEventListener("mousedown",apretar);addEventListener("mouseup",soltar);b.addEventListener("contextmenu",function(v){v.preventDefault()});
+$("c").addEventListener("click",function(){navigator.clipboard.writeText(base.trim()).then(function(){aviso("Copiado.")})});
+</script></body></html>
