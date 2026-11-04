@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Prueba boton</title>
+<style>body{font-family:Arial,sans-serif;padding:14px;font-size:16px}button{display:block;width:100%;padding:16px;font-size:18px;font-weight:600;background:#1F3864;color:#fff;border:0;border-radius:12px;margin:10px 0;touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}button.on{background:#B3261E}pre{white-space:pre-wrap;background:#EEF0F3;padding:10px;border-radius:8px;font-family:inherit}</style></head><body>
+<button id="a">A. Tocar: permitir micrófono</button>
+<button id="b">B. Tocar: empezar / parar</button>
+<button id="c" style="height:130px">C. Mantener apretado</button>
+<pre id="t">(acá aparece lo que digas)</pre><pre id="e"></pre>
+<script>
+var $=function(i){return document.getElementById(i)},S=window.SpeechRecognition||window.webkitSpeechRecognition,rec=null,texto="",sigue=false;
+function av(x){$("e").textContent+=x+"\n"}
+av("Segura: "+window.isSecureContext+" / Micrófono: "+!!navigator.mediaDevices+" / Voz: "+!!S);
+function arrancar(q){if(!S){av(q+": sin reconocimiento");return}rec=new S();rec.lang="es-AR";rec.continuous=true;rec.interimResults=true;
+rec.onstart=function(){av(q+": escuchando")};
+rec.onresult=function(v){var p="";for(var i=v.resultIndex;i<v.results.length;i++){if(v.results[i].isFinal)texto+=v.results[i][0].transcript+" ";else p+=v.results[i][0].transcript}$("t").textContent=texto+p};
+rec.onerror=function(v){av(q+" error: "+v.error)};rec.onend=function(){av(q+": terminó");if(sigue)arrancar(q)};
+try{rec.start()}catch(z){av(q+" no arrancó: "+z.name)}}
+$("a").addEventListener("click",function(){navigator.mediaDevices.getUserMedia({audio:true}).then(function(s){av("A: micrófono PERMITIDO");s.getTracks().forEach(function(t){t.stop()})}).catch(function(z){av("A: negado ("+z.name+")")})});
+$("b").addEventListener("click",function(){if(sigue){sigue=false;$("b").classList.remove("on");if(rec)rec.stop()}else{sigue=true;$("b").classList.add("on");arrancar("B")}});
+var c=$("c");c.addEventListener("touchstart",function(v){v.preventDefault();c.classList.add("on");sigue=true;arrancar("C")},{passive:false});
+function soltar(){if(!c.classList.contains("on"))return;c.classList.remove("on");sigue=false;if(rec)rec.stop()}
+c.addEventListener("touchend",soltar);c.addEventListener("touchcancel",soltar);c.addEventListener("contextmenu",function(v){v.preventDefault()});
+</script></body></html>
